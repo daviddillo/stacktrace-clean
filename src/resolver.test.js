@@ -1,70 +1,64 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { resolveFrame, resolveFrames } from './resolver.js';
-import * as sourcemap from './sourcemap.js';
+'use strict';
 
-vi.mock('./sourcemap.js');
+jest.mock('./sourcemap');
+
+const { resolveSourceMap } = require('./sourcemap');
+const { resolveFrame, resolveFrames } = require('./resolver');
 
 const baseFrame = {
-  raw: '    at myFn (/app/dist/index.js:10:5)',
-  name: 'myFn',
-  file: '/app/dist/index.js',
-  line: 10,
-  column: 5,
-  isNative: false,
+  file: '/project/dist/index.js',
+  line: 42,
+  column: 10,
+  name: 'doSomething',
+  raw: '    at doSomething (/project/dist/index.js:42:10)',
 };
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
 describe('resolveFrame', () => {
-  it('returns frame unchanged when no source map found', async () => {
-    sourcemap.resolveOriginalPosition.mockResolvedValue(null);
+  afterEach(() => jest.resetAllMocks());
+
+  test('returns original frame when no source map found', async () => {
+    resolveSourceMap.mockResolvedValue(null);
     const result = await resolveFrame(baseFrame);
     expect(result).toEqual(baseFrame);
-    expect(result.isResolved).toBeUndefined();
   });
 
-  it('returns frame unchanged when file is missing', async () => {
-    const frame = { ...baseFrame, file: null };
-    const result = await resolveFrame(frame);
-    expect(result).toEqual(frame);
-  });
-
-  it('resolves frame to original source position', async () => {
-    sourcemap.resolveOriginalPosition.mockResolvedValue({
-      source: 'src/index.ts',
-      line: 42,
+  test('maps frame to original source position', async () => {
+    resolveSourceMap.mockResolvedValue({
+      source: '/project/src/index.ts',
+      line: 10,
       column: 3,
-      name: 'originalFn',
+      name: 'doSomething',
     });
-
     const result = await resolveFrame(baseFrame);
-    expect(result.file).toBe('src/index.ts');
-    expect(result.line).toBe(42);
+    expect(result.file).toBe('/project/src/index.ts');
+    expect(result.line).toBe(10);
     expect(result.column).toBe(3);
-    expect(result.name).toBe('originalFn');
-    expect(result.isResolved).toBe(true);
+    expect(result.originalFile).toBe('/project/dist/index.js');
+    expect(result.originalLine).toBe(42);
   });
 
-  it('keeps original frame name when source map name is null', async () => {
-    sourcemap.resolveOriginalPosition.mockResolvedValue({
-      source: 'src/index.ts',
-      line: 42,
-      column: 3,
-      name: null,
-    });
-
+  test('returns frame unchanged if resolveSourceMap throws', async () => {
+    resolveSourceMap.mockRejectedValue(new Error('read error'));
     const result = await resolveFrame(baseFrame);
-    expect(result.name).toBe('myFn');
+    expect(result).toEqual(baseFrame);
+  });
+
+  test('handles null frame gracefully', async () => {
+    const result = await resolveFrame(null);
+    expect(result).toBeNull();
   });
 });
 
 describe('resolveFrames', () => {
-  it('resolves all frames', async () => {
-    sourcemap.resolveOriginalPosition.mockResolvedValue(null);
-    const frames = [baseFrame, { ...baseFrame, name: 'otherFn' }];
+  test('resolves all frames in array', async () => {
+    resolveSourceMap.mockResolvedValue(null);
+    const frames = [baseFrame, { ...baseFrame, line: 99 }];
     const results = await resolveFrames(frames);
     expect(results).toHaveLength(2);
+  });
+
+  test('returns empty array for non-array input', async () => {
+    const results = await resolveFrames(null);
+    expect(results).toEqual([]);
   });
 });

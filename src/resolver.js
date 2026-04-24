@@ -1,44 +1,40 @@
-import path from 'path';
-import { resolveOriginalPosition } from './sourcemap.js';
+'use strict';
+
+const path = require('path');
+const { resolveSourceMap } = require('./sourcemap');
 
 /**
- * Attempts to resolve a parsed stack frame to its original source position.
- * Falls back to the compiled frame if no source map is available.
- *
- * @param {import('./parser.js').ParsedFrame} frame
- * @returns {Promise<import('./parser.js').ParsedFrame>}
+ * Attempt to resolve a single frame through its source map.
+ * Returns a new frame object with updated file/line/column if resolved.
  */
-export async function resolveFrame(frame) {
-  if (!frame.file || !frame.line) return frame;
+async function resolveFrame(frame, options = {}) {
+  if (!frame || !frame.file) return frame;
 
-  const absolutePath = path.isAbsolute(frame.file)
-    ? frame.file
-    : path.resolve(process.cwd(), frame.file);
+  try {
+    const position = await resolveSourceMap(frame.file, frame.line, frame.column);
+    if (!position) return frame;
 
-  const original = await resolveOriginalPosition(
-    absolutePath,
-    frame.line,
-    frame.column ?? 0
-  );
-
-  if (!original) return frame;
-
-  return {
-    ...frame,
-    file: original.source,
-    line: original.line,
-    column: original.column,
-    name: original.name ?? frame.name,
-    isResolved: true,
-  };
+    return {
+      ...frame,
+      file: position.source || frame.file,
+      line: position.line != null ? position.line : frame.line,
+      column: position.column != null ? position.column : frame.column,
+      originalFile: frame.file,
+      originalLine: frame.line,
+      originalColumn: frame.column,
+      name: position.name || frame.name,
+    };
+  } catch {
+    return frame;
+  }
 }
 
 /**
- * Resolves all frames in a stack trace in parallel.
- *
- * @param {import('./parser.js').ParsedFrame[]} frames
- * @returns {Promise<import('./parser.js').ParsedFrame[]>}
+ * Resolve all frames in a parsed stack trace.
  */
-export async function resolveFrames(frames) {
-  return Promise.all(frames.map(resolveFrame));
+async function resolveFrames(frames, options = {}) {
+  if (!Array.isArray(frames)) return [];
+  return Promise.all(frames.map(frame => resolveFrame(frame, options)));
 }
+
+module.exports = { resolveFrame, resolveFrames };
