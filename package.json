@@ -1,0 +1,40 @@
+{
+  "name": "stacktrace-clean",
+  "version": "0.1.0",
+  "description": "A CLI tool that parses and prettifies Node.js stack traces with source map support and color-coded output.",
+  "main": "src/index.js",
+  "bin": {
+    "stacktrace-clean": "./bin/cli.js"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/"
+  },
+  "keywords": [
+    "stacktrace",
+    "sourcemap",
+    "cli",
+    "debug",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "source-map": "^0.7.4"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.57.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/*.test.js"
+    ]
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
