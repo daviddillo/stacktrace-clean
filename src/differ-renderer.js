@@ -1,62 +1,60 @@
-'use strict';
+import { formatFrame } from './formatter.js';
 
-/**
- * differ-renderer.js — renders a differ result as coloured CLI output
- */
+const RESET = '\x1b[0m';
+const GREEN = '\x1b[32m';
+const RED = '\x1b[31m';
+const DIM = '\x1b[2m';
+const BOLD = '\x1b[1m';
+const CYAN = '\x1b[36m';
 
-const { formatFrame } = require('./formatter');
-
-const COLORS = {
-  reset: '\x1b[0m',
-  green: '\x1b[32m',
-  red: '\x1b[31m',
-  dim: '\x1b[2m',
-  bold: '\x1b[1m',
-  yellow: '\x1b[33m',
-};
-
-function colorize(color, text) {
-  return `${COLORS[color]}${text}${COLORS.reset}`;
-}
-
-function renderDiffEntry(entry, { color = true } = {}) {
-  const formatted = formatFrame(entry.frame);
-  if (!color) {
-    const prefix = entry.type === 'added' ? '+ ' : entry.type === 'removed' ? '- ' : '  ';
-    return `${prefix}${formatted}`;
-  }
-  switch (entry.type) {
+export function colorize(type, text) {
+  switch (type) {
     case 'added':
-      return colorize('green', `+ ${formatted}`);
+      return `${GREEN}+ ${text}${RESET}`;
     case 'removed':
-      return colorize('red', `- ${formatted}`);
+      return `${RED}- ${text}${RESET}`;
+    case 'unchanged':
     default:
-      return colorize('dim', `  ${formatted}`);
+      return `${DIM}  ${text}${RESET}`;
   }
 }
 
-function renderHeader(headerChanged, traceB, { color = true } = {}) {
-  const prefix = headerChanged ? (color ? colorize('yellow', '~ ') : '~ ') : '  ';
-  return `${prefix}${traceB.header || ''}`;
+export function renderDiffEntry(entry) {
+  const { type, frame } = entry;
+  const text = formatFrame ? formatFrame(frame) : (frame.raw || String(frame));
+  return colorize(type, text);
 }
 
-function renderSummary(summary, { color = true } = {}) {
-  const parts = [];
-  if (summary.added) parts.push(color ? colorize('green', `+${summary.added}`) : `+${summary.added}`);
-  if (summary.removed) parts.push(color ? colorize('red', `-${summary.removed}`) : `-${summary.removed}`);
-  if (summary.same) parts.push(color ? colorize('dim', `=${summary.same}`) : `=${summary.same}`);
-  return parts.join('  ');
+export function renderHeader(headerA, headerB) {
+  const lineA = `${RED}- ${headerA}${RESET}`;
+  const lineB = `${GREEN}+ ${headerB}${RESET}`;
+  const divider = `${DIM}${'─'.repeat(60)}${RESET}`;
+  return [divider, lineA, lineB, divider].join('\n');
 }
 
-function renderDiff(traceA, traceB, compareResult, options = {}) {
+export function renderSummary(summary) {
+  const { added = 0, removed = 0, unchanged = 0 } = summary;
+  const parts = [
+    `${GREEN}${added} added${RESET}`,
+    `${RED}${removed} removed${RESET}`,
+    `${DIM}${unchanged} unchanged${RESET}`
+  ];
+  return `${BOLD}${CYAN}~${RESET} ${parts.join(', ')}`;
+}
+
+export function renderDiff(diffResult) {
+  const { headerA = '', headerB = '', entries = [], summary = {} } = diffResult;
   const lines = [];
-  lines.push(renderHeader(compareResult.headerChanged, traceB, options));
-  for (const entry of compareResult.diff) {
-    lines.push(renderDiffEntry(entry, options));
-  }
+
+  lines.push(renderHeader(headerA, headerB));
   lines.push('');
-  lines.push(renderSummary(compareResult.summary, options));
+
+  for (const entry of entries) {
+    lines.push(renderDiffEntry(entry));
+  }
+
+  lines.push('');
+  lines.push(renderSummary(summary));
+
   return lines.join('\n');
 }
-
-module.exports = { renderDiffEntry, renderHeader, renderSummary, renderDiff };
