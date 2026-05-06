@@ -25,6 +25,11 @@ test('bucketByCategory groups frames correctly', () => {
   expect(buckets.app[0].name).toBe('doWork');
 });
 
+test('bucketByCategory returns empty object for empty input', () => {
+  const buckets = bucketByCategory([]);
+  expect(Object.keys(buckets)).toHaveLength(0);
+});
+
 test('buildTimeline excludes internal frames by default', () => {
   const tl = buildTimeline(frames);
   expect(tl).toHaveLength(2);
@@ -46,6 +51,10 @@ test('buildTimeline entries have expected shape', () => {
     name: 'doWork',
     category: 'app',
   });
+});
+
+test('buildTimeline returns empty array for empty input', () => {
+  expect(buildTimeline([])).toEqual([]);
 });
 
 test('formatTimeline returns readable string', () => {
