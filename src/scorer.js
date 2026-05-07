@@ -83,4 +83,17 @@ function rankFrames(frames) {
   return [...frames].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 }
 
-module.exports = { scoreFrame, scoreFrames, rankFrames };
+/**
+ * Returns the single highest-scoring frame from a list of already-scored frames.
+ * Useful when you only need the most actionable frame (e.g. for a one-line summary).
+ * @param {object[]} frames — already scored
+ * @returns {object|null}
+ */
+function topFrame(frames) {
+  if (!Array.isArray(frames) || frames.length === 0) return null;
+  return frames.reduce((best, frame) =>
+    (frame.score ?? 0) > (best.score ?? 0) ? frame : best
+  );
+}
+
+module.exports = { scoreFrame, scoreFrames, rankFrames, topFrame };
