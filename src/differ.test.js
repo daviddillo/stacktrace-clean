@@ -37,6 +37,15 @@ describe('diffFrames', () => {
   test('empty inputs return empty diff', () => {
     expect(diffFrames([], [])).toEqual([]);
   });
+
+  test('each diff entry has a type and frame property', () => {
+    const diff = diffFrames([frameA, frameB], [frameA, frameC]);
+    diff.forEach(entry => {
+      expect(entry).toHaveProperty('type');
+      expect(entry).toHaveProperty('frame');
+      expect(['same', 'added', 'removed']).toContain(entry.type);
+    });
+  });
 });
 
 describe('diffSummary', () => {
@@ -49,6 +58,11 @@ describe('diffSummary', () => {
     ];
     const summary = diffSummary(diff);
     expect(summary).toEqual({ same: 1, added: 2, removed: 1 });
+  });
+
+  test('returns zero counts for empty diff', () => {
+    const summary = diffSummary([]);
+    expect(summary).toEqual({ same: 0, added: 0, removed: 0 });
   });
 });
 
